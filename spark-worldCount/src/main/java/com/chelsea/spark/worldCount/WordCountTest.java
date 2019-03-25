@@ -47,11 +47,29 @@ public class WordCountTest {
             }
         });
         // 对每组key对应的value按照自定义逻辑处理，生成新的K,V对
-        JavaPairRDD<String, Integer> result = pairWords.reduceByKey(new Function2<Integer, Integer, Integer>() {
+        JavaPairRDD<String, Integer> reduce = pairWords.reduceByKey(new Function2<Integer, Integer, Integer>() {
             private static final long serialVersionUID = 1L;
             @Override
             public Integer call(Integer v1, Integer v2) throws Exception {
                 return v1 + v2;
+            }
+        });
+        // K,V对进行调换
+        JavaPairRDD<Integer, String> mapToPair = reduce.mapToPair(new PairFunction<Tuple2<String, Integer>, Integer, String>() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public Tuple2<Integer, String> call(Tuple2<String, Integer> tuple) throws Exception {
+                return tuple.swap();
+            }
+        });
+        // 对key进行排序（倒序）
+        JavaPairRDD<Integer, String> sortByKey = mapToPair.sortByKey(false);
+        // K,V对进行调换
+        JavaPairRDD<String, Integer> result = sortByKey.mapToPair(new PairFunction<Tuple2<Integer, String>, String, Integer>() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            public Tuple2<String, Integer> call(Tuple2<Integer, String> tuple) throws Exception {
+                return tuple.swap();
             }
         });
         // 遍历新K,V对
