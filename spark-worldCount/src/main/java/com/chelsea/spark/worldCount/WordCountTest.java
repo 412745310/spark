@@ -72,6 +72,8 @@ public class WordCountTest {
                 return tuple.swap();
             }
         });
+        long count = result.count();
+        System.out.println(count);
         // 遍历新K,V对
         result.foreach(new VoidFunction<Tuple2<String, Integer>>() {
             private static final long serialVersionUID = 1L;
