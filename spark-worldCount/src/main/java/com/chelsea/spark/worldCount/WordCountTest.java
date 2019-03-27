@@ -25,11 +25,13 @@ public class WordCountTest {
          * 3. yarn -- hadoop生态圈中资源调度框架，spark也可以基于yarn调度资源
          * 4. mesos -- 资源调度框架
          */
+        // 如果是standalone模式需去掉此行
         conf.setMaster("local");
         conf.setAppName("JavaSparkWordCount");
         JavaSparkContext sc = new JavaSparkContext(conf);
         // 读取文件每行数据
         JavaRDD<String> lines = sc.textFile(Thread.currentThread().getContextClassLoader().getResource("").toString() + "wordCount");
+        // JavaRDD<String> lines = sc.textFile("hdfs://172.18.20.237:9000/wordcount/input/wordCount");
         // 读取行数据的每个单词
         JavaRDD<String> words = lines.flatMap(new FlatMapFunction<String, String>() {
             private static final long serialVersionUID = 1L;
@@ -73,13 +75,13 @@ public class WordCountTest {
             }
         });
         long count = result.count();
-        System.out.println(count);
+        System.out.println("单词数量：" + count);
         // 遍历新K,V对
         result.foreach(new VoidFunction<Tuple2<String, Integer>>() {
             private static final long serialVersionUID = 1L;
             @Override
             public void call(Tuple2<String, Integer> tuple) throws Exception {
-                System.out.println(tuple);
+                System.out.println("-------------->" + tuple);
             }
         });
         sc.stop();
