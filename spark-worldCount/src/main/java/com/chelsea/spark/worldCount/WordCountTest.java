@@ -84,7 +84,6 @@ public class WordCountTest {
                 System.out.println("-------------->" + tuple);
             }
         });
-        sc.stop();
         sc.close();
     }
 

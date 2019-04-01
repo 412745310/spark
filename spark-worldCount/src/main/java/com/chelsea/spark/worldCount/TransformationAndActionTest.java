@@ -43,7 +43,6 @@ public class TransformationAndActionTest {
         // 获取列表前5条记录
         System.out.println(rdd.take(5));
         
-        sc.stop();
         sc.close();
     }
     

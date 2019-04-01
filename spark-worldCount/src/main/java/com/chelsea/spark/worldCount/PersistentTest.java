@@ -36,7 +36,6 @@ public class PersistentTest {
         // 第二次从内存中直接获取数据并计算
         long count2 = lines.count();
         System.out.println("count2 :" + count2 + ", time : " + (System.currentTimeMillis() - startTime));
-        sc.stop();
         sc.close();
     }
 
