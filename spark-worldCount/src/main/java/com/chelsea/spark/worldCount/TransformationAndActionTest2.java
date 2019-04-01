@@ -16,7 +16,7 @@ import org.apache.spark.api.java.function.VoidFunction;
 import scala.Tuple2;
 
 /**
- * 转换和触发类算子
+ * 转换和触发类算子的分区操作
  * 返回值为RDD类型的是转换类算子，否则为触发类算子
  * 转换类算子是懒加载，必须有触发类算子才会执行
  * 
