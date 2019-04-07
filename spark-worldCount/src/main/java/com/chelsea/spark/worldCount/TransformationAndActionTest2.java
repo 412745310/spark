@@ -11,6 +11,7 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.Optional;
 import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.VoidFunction;
 
 import scala.Tuple2;
@@ -23,6 +24,7 @@ import scala.Tuple2;
  * @author shevchenko
  *
  */
+@SuppressWarnings("unused")
 public class TransformationAndActionTest2 {
 
     public static void main(String[] args) {
@@ -47,31 +49,77 @@ public class TransformationAndActionTest2 {
                 new Tuple2<String, String>("key5", "e")
                 ), 2);
         JavaRDD<String> rdd3 = sc.parallelize(Arrays.asList(
-                "a", "b", "c", "a", "b", "d"
+                "a", "b", "c", "d", "e", "f"
                 ), 3);
         // 根据key内连接
-        join(rdd1, rdd2);
+        //join(rdd1, rdd2);
         // 根据key左连接
-        leftJoin(rdd1, rdd2);
+        //leftJoin(rdd1, rdd2);
         // 根据key右连接
-        rightJoin(rdd1, rdd2);
+        //rightJoin(rdd1, rdd2);
         // 根据key全连接
-        fullJoin(rdd1, rdd2);
+        //fullJoin(rdd1, rdd2);
         // 数据集合并
-        union(rdd1, rdd2);
+        //union(rdd1, rdd2);
         // 数据集交集
-        intersection(rdd1, rdd2);
+        //intersection(rdd1, rdd2);
         // 数据集差集
-        subtract(rdd1, rdd2);
+        //subtract(rdd1, rdd2);
         // 根据分区批量执行map
-        mapPartition(rdd3);
+        //mapPartition(rdd3);
         // 数据集去重
-        distinct(rdd3);
+        //distinct(rdd3);
         // 根据key分组
-        cogroup(rdd1, rdd2);
+        //cogroup(rdd1, rdd2);
         // 根据分区批量执行foreach
-        foreachPartition(rdd1);
+        //foreachPartition(rdd1);
+        // 根据分区索引批量执行map
+        //mapPartitionsWithIndex(rdd3);
+        // 重新分区，底层实现方式与coalesce(numPartitions,true)相同（宽依赖，有shuffle洗牌操作）
+        //repartition(rdd3);
+        // 重新分区（宽窄依赖自定义，宽依赖有shuffle洗牌操作）
+        coalesce(rdd3);
         sc.close();
+    }
+    
+    private static void coalesce(JavaRDD<String> rdd3) {
+        // 如果第二个参数为true，表示需要洗牌分区，rdd之间为宽依赖
+        // 如果第二个参数为false，并且重定义分区数大于原分区数，分区数以原分区数为准，不会增加
+        JavaRDD<String> coalesce = rdd3.coalesce(2, true);
+        int size = coalesce.partitions().size();
+        System.out.println("当前分区数为:" + size);
+        mapPartitionsWithIndex(coalesce);
+    }
+
+    private static void repartition(JavaRDD<String> rdd3) {
+        JavaRDD<String> repartition = rdd3.repartition(2);
+        mapPartitionsWithIndex(repartition);
+    }
+
+    private static void mapPartitionsWithIndex(JavaRDD<String> rdd3) {
+        JavaRDD<String> mapPartitionsWithIndex = rdd3.mapPartitionsWithIndex(new Function2<Integer, Iterator<String>, Iterator<String>>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Iterator<String> call(Integer index, Iterator<String> iter) throws Exception {
+                List<String> list = new ArrayList<String>();
+                while(iter.hasNext()) {
+                    String next = iter.next();
+                    list.add("index:" + index + ", value:" + next);
+                }
+                return list.iterator();
+            }
+        }, true);
+        mapPartitionsWithIndex.foreach(new VoidFunction<String>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public void call(String t) throws Exception {
+                System.out.println(t);
+            }
+        });
     }
 
     private static void foreachPartition(JavaPairRDD<String, String> rdd1) {
