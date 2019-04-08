@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -42,6 +44,7 @@ public class TransformationAndActionTest2 {
         // 分区数为2
         JavaPairRDD<String, String> rdd2 = sc.parallelizePairs(Arrays.asList(
                 new Tuple2<String, String>("key1", "a"),
+                new Tuple2<String, String>("key1", "a"),
                 new Tuple2<String, String>("key1", "100"),
                 new Tuple2<String, String>("key2", "b"),
                 new Tuple2<String, String>("key2", "100"),
@@ -50,6 +53,9 @@ public class TransformationAndActionTest2 {
                 ), 2);
         JavaRDD<String> rdd3 = sc.parallelize(Arrays.asList(
                 "a", "b", "c", "d", "e", "f"
+                ), 3);
+        JavaRDD<Integer> rdd4 = sc.parallelize(Arrays.asList(
+                1,2,3,4,5,6,7
                 ), 3);
         // 根据key内连接
         //join(rdd1, rdd2);
@@ -78,10 +84,90 @@ public class TransformationAndActionTest2 {
         // 重新分区，底层实现方式与coalesce(numPartitions,true)相同（宽依赖，有shuffle洗牌操作）
         //repartition(rdd3);
         // 重新分区（宽窄依赖自定义，宽依赖有shuffle洗牌操作）
-        coalesce(rdd3);
+        //coalesce(rdd3);
+        // 对rdd的key进行分组合并
+        //groupBykey(rdd2);
+        // 对相同分区的元素进行压缩
+        //zip(rdd1, rdd2);
+        // 对元素和索引下标进行压缩
+        //zipWithIndex(rdd2);
+        // 自定义元素合并
+        //reduce(rdd4);
+        // 统计rdd中每个key的数量
+        //countByKey(rdd2);
+        // 统计rdd中每个元素的数量
+        countByValue(rdd2);
         sc.close();
     }
     
+    private static void countByValue(JavaPairRDD<String, String> rdd2) {
+        Map<Tuple2<String, String>, Long> countByValue = rdd2.countByValue();
+        for (Entry<Tuple2<String,String>,Long> entry : countByValue.entrySet()) {
+            Tuple2<String,String> key = entry.getKey();
+            Long value = entry.getValue();
+            System.out.println("key = " + key + ", value = " + value);
+        }
+    }
+
+    private static void countByKey(JavaPairRDD<String, String> rdd2) {
+        Map<String, Long> countByKey = rdd2.countByKey();
+        for (Entry<String, Long> entry : countByKey.entrySet()) {
+            String key = entry.getKey();
+            Long value = entry.getValue();
+            System.out.println("key = " + key + ", value = " + value);
+        }
+    }
+
+    private static void reduce(JavaRDD<Integer> rdd4) {
+        Integer reduce = rdd4.reduce(new Function2<Integer, Integer, Integer>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Integer call(Integer v1, Integer v2) throws Exception {
+                return v1 + v2;
+            }});
+        System.out.println(reduce);
+    }
+
+    private static void zipWithIndex(JavaPairRDD<String, String> rdd2) {
+        JavaPairRDD<Tuple2<String, String>, Long> zipWithIndex = rdd2.zipWithIndex();
+        zipWithIndex.foreach(new VoidFunction<Tuple2<Tuple2<String,String>,Long>>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public void call(Tuple2<Tuple2<String, String>, Long> t) throws Exception {
+                System.out.println(t);
+            }});
+    }
+
+    private static void zip(JavaPairRDD<String, String> rdd1, JavaPairRDD<String, String> rdd2) {
+        JavaPairRDD<Tuple2<String, String>, Tuple2<String, String>> zip = rdd1.zip(rdd2);
+        zip.foreach(new VoidFunction<Tuple2<Tuple2<String,String>,Tuple2<String,String>>>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public void call(Tuple2<Tuple2<String, String>, Tuple2<String, String>> t) throws Exception {
+                System.out.println(t);
+            }});
+    }
+
+    private static void groupBykey(JavaPairRDD<String, String> rdd2) {
+        JavaPairRDD<String, Iterable<String>> groupByKey = rdd2.groupByKey();
+        groupByKey.foreach(new VoidFunction<Tuple2<String,Iterable<String>>>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public void call(Tuple2<String, Iterable<String>> t) throws Exception {
+                System.out.println(t);
+            }
+            
+        });
+    }
+
     private static void coalesce(JavaRDD<String> rdd3) {
         // 如果第二个参数为true，表示需要洗牌分区，rdd之间为宽依赖
         // 如果第二个参数为false，并且重定义分区数大于原分区数，分区数以原分区数为准，不会增加
