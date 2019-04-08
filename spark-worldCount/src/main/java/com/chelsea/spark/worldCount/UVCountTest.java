@@ -1,8 +1,5 @@
 package com.chelsea.spark.worldCount;
 
-import java.util.Map;
-import java.util.Map.Entry;
-
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
