@@ -55,6 +55,6 @@
 		</plugins>
 	</build>
 	<modules>
-		<module>spark-worldCount</module>
+		<module>spark-core</module>
 	</modules>
 </project>

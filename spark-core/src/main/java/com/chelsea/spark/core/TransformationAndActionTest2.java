@@ -1,4 +1,4 @@
-package com.chelsea.spark.worldCount;
+package com.chelsea.spark.core;
 
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -8,8 +8,8 @@
 		<artifactId>spark</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
-	<artifactId>spark-worldCount</artifactId>
-	<name>spark-worldCount</name>
+	<artifactId>spark-core</artifactId>
+	<name>spark-core</name>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
@@ -34,7 +34,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>com.chelsea.spark.worldCount.WordCountTest</mainClass>
+							<mainClass>com.chelsea.spark.core.WordCountTest</mainClass>
 						</manifest>
 					</archive>
 				</configuration>

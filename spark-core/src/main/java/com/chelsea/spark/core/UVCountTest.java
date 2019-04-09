@@ -1,4 +1,4 @@
-package com.chelsea.spark.worldCount;
+package com.chelsea.spark.core;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
