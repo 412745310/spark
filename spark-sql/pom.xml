@@ -42,7 +42,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>com.chelsea.spark.sql.SparkSqlByTxtTest</mainClass>
+							<mainClass>com.chelsea.spark.sql.SparkHive</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
