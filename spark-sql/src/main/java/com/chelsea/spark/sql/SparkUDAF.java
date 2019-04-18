@@ -49,6 +49,7 @@ public class SparkUDAF {
         sqlContext.registerDataFrameAsTable(createDataFrame, "person");
         sparkSession.udf().register("strCount", new MyUDAF());
         sparkSession.sql("select name, strCount(name) from person group by name").show();
+        sparkSession.close();
     }
     
     /**
