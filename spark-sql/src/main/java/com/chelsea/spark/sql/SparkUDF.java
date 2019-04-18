@@ -38,8 +38,8 @@ public class SparkUDF {
         });
         Dataset<Row> createDataFrame = sparkSession.createDataFrame(personRdd, Person.class);
         SQLContext sqlContext = sparkSession.sqlContext();
-        sqlContext.udf().register("strLen", new MyUDF(), DataTypes.IntegerType);
         sqlContext.registerDataFrameAsTable(createDataFrame, "person");
+        sparkSession.udf().register("strLen", new MyUDF(), DataTypes.IntegerType);
         Dataset<Row> result = sparkSession.sql("select t.age, strLen(t.name, 10) from person t where age > 15");
         result.show();
     }
