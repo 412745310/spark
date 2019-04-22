@@ -2,10 +2,12 @@ package com.chelsea.spark.stream;
 
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.Optional;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
@@ -30,6 +32,9 @@ public class SparkStreamTest {
         // local[2]表示有2个任务，分别执行接收数据和处理数据，如果设置为1或者不设置，将只会接收数据，处理数据代码不会执行
         SparkConf conf = new SparkConf().setMaster("local[2]").setAppName("sparkStreamTest");
         JavaSparkContext sc = new JavaSparkContext(conf);
+        // 设置checkpoint保存历史数据
+        //sc.setCheckpointDir("hdfs://172.18.20.237:9000/input/checkpoint/sparkStreamCheckPoint");
+        sc.setCheckpointDir("C:/Users/Administrator/Desktop/sparkStreamCheckPoint");
         // 设置日志级别
         sc.setLogLevel("error");
         // 将前5秒接收的数据批量处理
@@ -65,8 +70,25 @@ public class SparkStreamTest {
                 return v1 + v2;
             }
         });
-        // resultPairDS.print();
-        resultPairDS.foreachRDD(new VoidFunction<JavaPairRDD<String,Integer>>() {
+        // 将历史数据与当前批次数据做整合，并保存到checkpoint中（应用重启后历史数据丢失）
+        JavaPairDStream<String, Integer> updatePairDS = resultPairDS.updateStateByKey(new Function2<List<Integer>, Optional<Integer>, Optional<Integer>>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Optional<Integer> call(List<Integer> values, Optional<Integer> oldValue) throws Exception {
+                Integer currentValue = 0;
+                if (oldValue.isPresent()) {
+                    currentValue = oldValue.get();
+                }
+                for (Integer value : values) {
+                    currentValue += value;
+                }
+                return Optional.of(currentValue);
+            }
+        });
+        // updatePairDS.print();
+        updatePairDS.foreachRDD(new VoidFunction<JavaPairRDD<String,Integer>>() {
             
             private static final long serialVersionUID = 1L;
 
