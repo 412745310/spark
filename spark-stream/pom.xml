@@ -40,7 +40,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>com.chelsea.spark.stream.SparkStreamTest</mainClass>
+							<mainClass>com.chelsea.spark.stream.SparkStreamKeyStateTest</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
