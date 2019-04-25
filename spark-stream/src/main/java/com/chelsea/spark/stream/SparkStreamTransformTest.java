@@ -18,6 +18,7 @@ import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 
 import scala.Tuple2;
+import scala.reflect.ClassTag;
 
 /**
  * spark流 transform算子以及广播变量
@@ -28,13 +29,10 @@ import scala.Tuple2;
 public class SparkStreamTransformTest {
 
     public static void main(String[] args) throws InterruptedException {
-        SparkConf conf = new SparkConf().setMaster("local[2]").setAppName("SparkStreamKeyStateTest");
+        SparkConf conf = new SparkConf().setMaster("local[2]").setAppName("SparkStreamTransformTest");
         JavaSparkContext sc = new JavaSparkContext(conf);
         sc.setLogLevel("error");
         JavaStreamingContext jsc = new JavaStreamingContext(sc, Durations.seconds(5));
-        List<String> blackList = Arrays.asList("zhangsan");
-        // 广播变量
-        final Broadcast<List<String>> broadcast = jsc.sparkContext().broadcast(blackList);
         JavaReceiverInputDStream<String> socketTextStream = jsc.socketTextStream("47.107.247.223", 9999);
         JavaPairDStream<String, String> mapToPair = socketTextStream.mapToPair(new PairFunction<String, String, String>() {
 
@@ -54,6 +52,11 @@ public class SparkStreamTransformTest {
             @Override
             public JavaRDD<String> call(JavaPairRDD<String, String> rdd) throws Exception {
                 System.out.println("driver端执行transform");
+                // 可修改为从数据库或者配置文件中动态读取
+                List<String> blackList = Arrays.asList("zhangsan");
+                // 广播变量
+                JavaSparkContext context = new JavaSparkContext(rdd.context());
+                Broadcast<List<String>> broadcast = context.broadcast(blackList);
                 JavaPairRDD<String, String> filter = rdd.filter(new Function<Tuple2<String,String>, Boolean>() {
                     private static final long serialVersionUID = 1L;
 
