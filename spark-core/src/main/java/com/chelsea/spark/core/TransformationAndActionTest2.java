@@ -13,8 +13,10 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.Optional;
 import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.VoidFunction;
+import org.apache.spark.broadcast.Broadcast;
 
 import scala.Tuple2;
 
@@ -96,10 +98,38 @@ public class TransformationAndActionTest2 {
         // 统计rdd中每个key的数量
         //countByKey(rdd2);
         // 统计rdd中每个元素的数量
-        countByValue(rdd2);
+        // countByValue(rdd2);
+        // 没有shuffle的左连接操作
+        leftJoinWithoutShuffle(sc, rdd1, rdd2);
         sc.close();
     }
     
+    private static void leftJoinWithoutShuffle(JavaSparkContext sc, JavaPairRDD<String, String> rdd1, JavaPairRDD<String, String> rdd2) {
+       Broadcast<List<Tuple2<String, String>>> broadcast = sc.broadcast(rdd1.collect());
+       JavaRDD<Tuple2<String, Tuple2<String, Optional<String>>>> map = rdd2.map(new Function<Tuple2<String,String>, Tuple2<String,Tuple2<String,Optional<String>>>>() {
+
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public Tuple2<String,Tuple2<String,Optional<String>>> call(Tuple2<String, String> t) throws Exception {
+            List<Tuple2<String, String>> list = broadcast.value();
+            for (Tuple2<String, String> tuple : list) {
+                if (tuple._1.equals(t._1)) {
+                    return new Tuple2<String,Tuple2<String,Optional<String>>>(t._1, new Tuple2<String, Optional<String>>(t._2, Optional.ofNullable(tuple._2)));
+                }
+            }
+            return new Tuple2<String,Tuple2<String,Optional<String>>>(t._1, new Tuple2<String, Optional<String>>(t._2, Optional.ofNullable(null)));
+        }});
+       map.foreach(new VoidFunction<Tuple2<String,Tuple2<String, Optional<String>>>>() {
+
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public void call(Tuple2<String, Tuple2<String, Optional<String>>> t) throws Exception {
+            System.out.println(t._1 + " = " + t._2._1 + "," + t._2._2.orNull());
+        }});
+    }
+
     private static void countByValue(JavaPairRDD<String, String> rdd2) {
         Map<Tuple2<String, String>, Long> countByValue = rdd2.countByValue();
         for (Entry<Tuple2<String,String>,Long> entry : countByValue.entrySet()) {
