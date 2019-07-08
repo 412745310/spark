@@ -24,6 +24,10 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
+		    <groupId>org.apache.spark</groupId>
+		    <artifactId>spark-streaming-kafka_2.11</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>com.thoughtworks.paranamer</groupId>
 			<artifactId>paranamer</artifactId>
 		</dependency>
@@ -40,7 +44,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>com.chelsea.spark.stream.SparkStreamKeyStateTest</mainClass>
+							<mainClass>com.chelsea.spark.stream.SparkStreamKafka</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
