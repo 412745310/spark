@@ -15,6 +15,7 @@ import org.apache.spark.api.java.Optional;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
+import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.api.java.function.VoidFunction;
 import org.apache.spark.broadcast.Broadcast;
 
@@ -100,10 +101,78 @@ public class TransformationAndActionTest2 {
         // 统计rdd中每个元素的数量
         // countByValue(rdd2);
         // 没有shuffle的左连接操作
-        leftJoinWithoutShuffle(sc, rdd1, rdd2);
+        //leftJoinWithoutShuffle(sc, rdd1, rdd2);
+        // 对于k,v格式的RDD，只改变value不改变key，一对一
+        // mapValues(rdd4);
+        // 对于k,v格式的RDD，只改变value不改变key，一对多
+        flatMapValues(rdd4);
         sc.close();
     }
     
+    private static void flatMapValues(JavaRDD<Integer> rdd4) {
+        JavaPairRDD<Integer, String> mapToPair = rdd4.mapToPair(new PairFunction<Integer, Integer, String>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Tuple2<Integer, String> call(Integer t) throws Exception {
+                return new Tuple2<Integer, String>(t, "x_" + t);
+            }
+        });
+        JavaPairRDD<Integer, String> flatMapValuesRdd = mapToPair.flatMapValues(new Function<String, Iterable<String>>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Iterable<String> call(String t) throws Exception {
+                List<String> list = new ArrayList<>();
+                for (int i = 0; i < 5; i++) {
+                    list.add(i + t);
+                }
+                return (Iterable<String>)list;
+            }
+        });
+        
+        flatMapValuesRdd.foreach(new VoidFunction<Tuple2<Integer, String>>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public void call(Tuple2<Integer, String> t) throws Exception {
+                System.out.println(t._1 + " = " + t._2);
+            }
+        });
+    }
+
+    private static void mapValues(JavaRDD<Integer> rdd4) {
+        JavaPairRDD<Integer, String> mapToPair = rdd4.mapToPair(new PairFunction<Integer, Integer, String>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Tuple2<Integer, String> call(Integer t) throws Exception {
+                return new Tuple2<Integer, String>(t, "x_" + t);
+            }
+        });
+        JavaPairRDD<Integer, String> mapValues = mapToPair.mapValues(new Function<String, String>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public String call(String t) throws Exception {
+                return "y" + t;
+            }});
+        
+        mapValues.foreach(new VoidFunction<Tuple2<Integer,String>>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public void call(Tuple2<Integer, String> t) throws Exception {
+                System.out.println(t._1 + " = " + t._2);
+            }});
+    }
+
     private static void leftJoinWithoutShuffle(JavaSparkContext sc, JavaPairRDD<String, String> rdd1, JavaPairRDD<String, String> rdd2) {
        Broadcast<List<Tuple2<String, String>>> broadcast = sc.broadcast(rdd1.collect());
        JavaRDD<Tuple2<String, Tuple2<String, Optional<String>>>> map = rdd2.map(new Function<Tuple2<String,String>, Tuple2<String,Tuple2<String,Optional<String>>>>() {
