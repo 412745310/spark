@@ -48,6 +48,7 @@ public class SparkStreamKafka {
         for (String kafkaTopic : kafkaTopicsSplited) {
             topics.add(kafkaTopic);
         }
+        // spark stream自己维护kafka消息偏移量，不会同步偏移量给zookeeper
         JavaPairInputDStream<String, String> inputDStream =
                 KafkaUtils.createDirectStream(jssc, String.class, String.class, StringDecoder.class,
                         StringDecoder.class, kafkaParams, topics);
