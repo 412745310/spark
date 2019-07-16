@@ -1,12 +1,15 @@
 package com.chelsea.spark.core;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.spark.Partitioner;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -49,11 +52,13 @@ public class TransformationAndActionTest2 {
                 new Tuple2<String, String>("key1", "a"),
                 new Tuple2<String, String>("key1", "a"),
                 new Tuple2<String, String>("key1", "100"),
+                new Tuple2<String, String>("key1", "50"),
+                new Tuple2<String, String>("key1", "60"),
                 new Tuple2<String, String>("key2", "b"),
                 new Tuple2<String, String>("key2", "100"),
                 new Tuple2<String, String>("key3", "c"),
                 new Tuple2<String, String>("key5", "e")
-                ), 2);
+                ), 4);
         JavaRDD<String> rdd3 = sc.parallelize(Arrays.asList(
                 "a", "b", "c", "d", "e", "f"
                 ), 3);
@@ -105,10 +110,141 @@ public class TransformationAndActionTest2 {
         // 对于k,v格式的RDD，只改变value不改变key，一对一
         // mapValues(rdd4);
         // 对于k,v格式的RDD，只改变value不改变key，一对多
-        flatMapValues(rdd4);
+        // flatMapValues(rdd4);
+        // 对k,v格式的RDD进行key分组合并
+        //combineByKey(rdd2);
+        // 自定义分区并对分区内的key进行排序
+        //repartitionAndSortWithinPartitions(rdd2);
+        // 对k,v格式的RDD进行key分组合并
+        aggregateByKey(rdd2);
         sc.close();
     }
     
+    private static void aggregateByKey(JavaPairRDD<String, String> rdd2) {
+        // 第一个参数为分区内的初始值
+        JavaPairRDD<String, String> aggregateByKeyRdd = rdd2.aggregateByKey("~", new Function2<String, String, String>() {
+
+            private static final long serialVersionUID = 1L;
+               
+            /**
+             * 分区内key合并
+             */
+            @Override
+            public String call(String v1, String v2) throws Exception {
+                return v1 + "-" + v2;
+            }
+        }, new Function2<String, String, String>() {
+
+            private static final long serialVersionUID = 1L;
+            
+            /**
+             * 分区间key合并
+             */
+            @Override
+            public String call(String v1, String v2) throws Exception {
+                return v1 + "," + v2;
+            }
+        });
+        aggregateByKeyRdd.foreachPartition(new VoidFunction<Iterator<Tuple2<String, String>>>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public void call(Iterator<Tuple2<String, String>> t) throws Exception {
+                while (t.hasNext()) {
+                    Tuple2<String, String> tuple = t.next();
+                    System.out.println(tuple._1 + "=" + tuple._2);
+                }
+            }
+        });
+    }
+
+    private static void repartitionAndSortWithinPartitions(JavaPairRDD<String, String> rdd2) {
+        JavaPairRDD<String, String> repartitionAndSortWithinPartitionsRdd = rdd2.repartitionAndSortWithinPartitions(new Partitioner() {
+            
+            private static final long serialVersionUID = 1L;
+
+            /**
+             * 自定义分区总个数
+             */
+            @Override
+            public int numPartitions() {
+                return 2;
+            }
+            
+            /**
+             * 自定义分区规则
+             */
+            @Override
+            public int getPartition(Object key) {
+                int i = Math.abs(String.valueOf(key).hashCode()) % numPartitions();
+                if (i == 0) {
+                    return 0;
+                } else {
+                    return 1;
+                }
+            }
+        }, new MySort());
+        repartitionAndSortWithinPartitionsRdd.foreachPartition(new VoidFunction<Iterator<Tuple2<String, String>>>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public void call(Iterator<Tuple2<String, String>> t) throws Exception {
+                while (t.hasNext()) {
+                    Tuple2<String, String> tuple = t.next();
+                    System.out.println(tuple._1 + "=" + tuple._2);
+                }
+            }
+        });
+    }
+
+    private static void combineByKey(JavaPairRDD<String, String> rdd2) {
+        JavaPairRDD<String, String> combineByKeyRdd = rdd2.combineByKey(new Function<String, String>() {
+
+            private static final long serialVersionUID = 1L;
+
+            /**
+             * 初始值，对应每组key的第一个value值
+             */
+            @Override
+            public String call(String v1) throws Exception {
+                return v1;
+            }
+        }, new Function2<String, String, String>() {
+
+            private static final long serialVersionUID = 1L;
+
+            /**
+             * 分区内的key合并
+             */
+            @Override
+            public String call(String v1, String v2) throws Exception {
+                return v1 + "-" + v2;
+            }
+        }, new Function2<String, String, String>() {
+
+            private static final long serialVersionUID = 1L;
+
+            /**
+             * 分区间的key合并
+             */
+            @Override
+            public String call(String v1, String v2) throws Exception {
+                return v1 + "," + v2;
+            }
+        });
+        combineByKeyRdd.foreach(new VoidFunction<Tuple2<String, String>>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public void call(Tuple2<String, String> t) throws Exception {
+                System.out.println(t._1 + " = " + t._2);
+            }
+        });
+    }
+
     private static void flatMapValues(JavaRDD<Integer> rdd4) {
         JavaPairRDD<Integer, String> mapToPair = rdd4.mapToPair(new PairFunction<Integer, Integer, String>() {
 
@@ -501,6 +637,22 @@ public class TransformationAndActionTest2 {
                 System.out.println(t);
             }
         });
+    }
+    
+    /**
+     * 自定义排序
+     * 
+     * @author shevchenko
+     *
+     */
+    static class MySort implements Comparator<String>, Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public int compare(String o1, String o2) {
+            return Math.abs(o2.hashCode()) - Math.abs(o1.hashCode());
+        }
     }
     
 }
