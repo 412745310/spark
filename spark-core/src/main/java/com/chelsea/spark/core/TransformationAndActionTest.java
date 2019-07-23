@@ -33,7 +33,7 @@ public class TransformationAndActionTest {
             }
         });
         // 随机抽样，true代表是否放回抽样, 0.5代表抽样比例
-        JavaRDD<String> rdd = words.sample(true, 1);
+        JavaRDD<String> rdd = words.sample(true, 0.5);
         // 获取总数
         System.out.println(rdd.count());
         // 获取列表第一条记录
