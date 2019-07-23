@@ -58,7 +58,7 @@ public class TransformationAndActionTest2 {
                 new Tuple2<String, String>("key2", "100"),
                 new Tuple2<String, String>("key3", "c"),
                 new Tuple2<String, String>("key5", "e")
-                ), 4);
+                ), 1);
         JavaRDD<String> rdd3 = sc.parallelize(Arrays.asList(
                 "a", "b", "c", "d", "e", "f"
                 ), 3);
@@ -116,10 +116,36 @@ public class TransformationAndActionTest2 {
         // 自定义分区并对分区内的key进行排序
         //repartitionAndSortWithinPartitions(rdd2);
         // 对k,v格式的RDD进行key分组合并
-        aggregateByKey(rdd2);
+        // aggregateByKey(rdd2);
+        // 对k,v格式的RDD进行key分组并重新分区
+        reduceByKeyAndPartition(rdd2);
         sc.close();
     }
     
+    private static void reduceByKeyAndPartition(JavaPairRDD<String, String> rdd2) {
+        JavaPairRDD<String, String> reduceByKey = rdd2.reduceByKey(new Function2<String, String, String>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public String call(String v1, String v2) throws Exception {
+                return v1 + "|" + v2;
+            }
+        }, 2);
+        reduceByKey.foreachPartition(new VoidFunction<Iterator<Tuple2<String, String>>>() {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public void call(Iterator<Tuple2<String, String>> t) throws Exception {
+                while (t.hasNext()) {
+                    Tuple2<String, String> tuple = t.next();
+                    System.out.println(tuple._1 + "=" + tuple._2);
+                }
+            }
+        });
+    }
+
     private static void aggregateByKey(JavaPairRDD<String, String> rdd2) {
         // 第一个参数为分区内的初始值
         JavaPairRDD<String, String> aggregateByKeyRdd = rdd2.aggregateByKey("~", new Function2<String, String, String>() {
