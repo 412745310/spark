@@ -1,0 +1,83 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:context="http://www.springframework.org/schema/context" 
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="
+	http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+	http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+	http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+	">
+
+	<context:annotation-config />
+	<context:component-scan base-package="com.chelsea.spark.test.log" />
+	
+	<!-- ==========属性文件位置 ========== -->
+	<context:property-placeholder location="classpath*:jdbc.properties" ignore-unresolvable="true" />
+
+	<!-- ==========数据源 ========== -->
+	<bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+		<!-- 基本属性 url、user、password -->
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+
+		<!-- 配置初始化大小、最小、最大 -->
+		<property name="initialSize" value="${cpool.initialPoolSize}" />
+		<property name="minIdle" value="${cpool.minPoolSize}" />
+		<property name="maxActive" value="${cpool.maxPoolSize}" />
+
+		<!-- 配置获取连接等待超时的时间 -->
+		<property name="maxWait" value="60000" />
+
+		<!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+		<property name="timeBetweenEvictionRunsMillis" value="60000" />
+
+		<!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+		<property name="minEvictableIdleTimeMillis" value="300000" />
+
+		<property name="validationQuery" value="SELECT 'x'" />
+		<property name="testWhileIdle" value="true" />
+		<property name="testOnBorrow" value="false" />
+		<property name="testOnReturn" value="false" />
+
+		<!-- 打开PSCache，并且指定每个连接上PSCache的大小 -->
+		<property name="poolPreparedStatements" value="true" />
+		<property name="maxPoolPreparedStatementPerConnectionSize" value="${cpool.maxStatementsPerConnection}" />
+
+		<!-- 配置监控统计拦截的filters -->
+		<property name="filters" value="stat" />
+	</bean>
+	
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+	    <tx:attributes>
+	        <tx:method name="add*" propagation="REQUIRES_NEW" />
+	        <tx:method name="update*" propagation="REQUIRES_NEW" />
+	        <tx:method name="delete*" propagation="REQUIRES_NEW" />
+	        <tx:method name="*" read-only="true"/>
+	    </tx:attributes>
+	</tx:advice>
+	<aop:config proxy-target-class="true">
+	    <aop:pointcut expression="execution(* com.chelsea.spark.test.log.service.**.*(..))" id="ServicePointcut" />
+	    <aop:advisor advice-ref="txAdvice" pointcut-ref="ServicePointcut" />
+	</aop:config> 
+
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="mapperLocations">
+			<list>
+				<value>classpath*:mapper/*.xml</value>
+			</list>
+		</property>
+	</bean>
+
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.chelsea.spark.test.log.dao" />
+	</bean>
+
+</beans>
