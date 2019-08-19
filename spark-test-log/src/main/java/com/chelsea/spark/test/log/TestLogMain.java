@@ -37,13 +37,13 @@ import com.chelsea.spark.test.log.util.SpringUtil;
  */
 public class TestLogMain {
 
-    private static final String brokers = "127.0.0.1:9092";
+    private static final String brokers = "172.18.20.237:9092";
     private static final String kafkaTopics = "sparkTestLogTopic";
     private static final String groupId = "sparkTestLogGroup";
     private static final LogService logService = SpringUtil.getInstance().getBean(LogService.class);
 
     public static void main(String[] args) throws Exception {
-        SparkConf conf = new SparkConf().setMaster("local[2]").setAppName("TestLog");
+        SparkConf conf = new SparkConf().setAppName("TestLog");
         JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.seconds(5));
         jssc.sparkContext().setLogLevel("error");
         Set<String> topicsSet = new HashSet<>(Arrays.asList(kafkaTopics.split(",")));
